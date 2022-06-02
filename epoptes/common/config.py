@@ -171,6 +171,7 @@ def save_groups(filename, model):
 system = read_shell_file('/etc/default/epoptes')
 # TODO: check if the types, e.g. PORT=int, may cause problems.
 system.setdefault('PORT', 789)
+system.setdefault('REVERSE_PORT', 987)
 system.setdefault('SOCKET_GROUP', 'epoptes')
 system.setdefault('DIR', '/run/epoptes')
 system.setdefault('THUMBSHOT_MS', 5000)

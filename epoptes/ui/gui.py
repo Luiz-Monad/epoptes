@@ -72,6 +72,7 @@ class EpoptesGui(object):
         self.vncserver_pwd = None
         self.vncviewer = None
         self.vncviewer_port = None
+        self.reverseserver = None
 
         self.builder = Gtk.Builder()
         self.builder.add_from_file('epoptes.ui')
@@ -184,6 +185,8 @@ class EpoptesGui(object):
             self.vncserver.kill()
         if self.vncviewer is not None:
             self.vncviewer.kill()
+        if self.reverseserver is not None:
+            self.reverseserver.kill()
         # noinspection PyUnresolvedReferences
         reactor.stop()
 
@@ -257,6 +260,15 @@ class EpoptesGui(object):
         sck.close()
         return port
 
+    def reverse_proxy(self, port, clients):
+        """Helper function for reversing the connection."""
+        rport = config.system['REVERSE_PORT']
+        if self.reverseserver is None:
+            self.reverseserver = subprocess.Popen(['wstunnel', '--server', ('ws://0.0.0.0:%d' % rport)])
+        tport = random.uniform(49152, 65535)
+        self.exec_on_clients(['execute', ('wstunnel -L %d:127.0.0.1:%d ws://172.17.0.2:%d' % (tport, port, rport))], clients, mode=EM_SYSTEM_OR_SESSION)
+        return tport
+
     def reverse_connection(self, cmd, *args):
         """Helper function for on_imi_broadcasts_*_activate."""
         # Open vncviewer in listen mode
@@ -290,7 +302,9 @@ class EpoptesGui(object):
             self.vncviewer = subprocess.Popen(scmd)
 
         # And, tell the clients to connect to the server
-        self.exec_on_selected_clients([cmd, self.vncviewer_port] + list(args))
+        clients = self.get_selected_clients()
+        rport = self.reverse_proxy(self.vncviewer_port, clients)
+        self.exec_on_selected_clients([cmd, 'localhost', rport] + list(args))
 
     def on_imi_broadcasts_monitor_user_activate(self, _widget):
         """Handle imi_sbroadcasts_monitor_user.activate event."""
@@ -388,7 +402,8 @@ class EpoptesGui(object):
             subprocess.Popen(['xterm', '-T', title, '-e', 'socat',
                               'tcp-listen:%d,keepalive=1' % port,
                               'stdio,raw,echo=0'])
-            self.exec_on_clients(['remote_term', port], [client], mode=e_m)
+            rport = self.reverse_proxy(port, [client])
+            self.exec_on_clients(['remote_term', 'localhost', rport], [client], mode=e_m)
 
     def on_imi_open_terminal_user_locally_activate(self, _widget):
         """Handle imi_open_terminal_user_locally.activate event."""

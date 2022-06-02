@@ -263,7 +263,7 @@ fi
 if [ -s /etc/epoptes/server.crt ] || [ "$cert_param" = "verify=0" ]; then
     exec socat -T 60 "openssl-connect:$SERVER:$PORT,$cert_param,interval=60,forever" "EXEC:$cmdline"
 elif [ -f /etc/epoptes/server.crt ]; then
-   exec socat "tcp:$SERVER:$PORT,interval=60,forever" "EXEC:$cmdline,nofork"
+    exec socat "tcp:$SERVER:$PORT,interval=60,forever" "EXEC:$cmdline,nofork"
 else
     die "
 The epoptes certificate file, /etc/epoptes/server.crt, doesn't exist.
