@@ -270,14 +270,14 @@ class EpoptesGui(object):
         self.exec_on_clients([
             'execute', ('wstunnel -L %d:127.0.0.1:%d ws://$SERVER:%d' % (tport, port, rport))],
             clients, mode=EM_SYSTEM_OR_SESSION)
-        return tport
+        return int(tport)
 
     def reverse_proxy_selected_clients(self, port):
         """Helper function for reversing the connection for selected clients."""
         clients = self.get_selected_clients()
         if not clients:  # No client selected, send the command to all
             clients = self.cstore
-        self.reverse_proxy_clients(command, port)
+        return self.reverse_proxy_clients(port, clients)
 
     def reverse_connection(self, cmd, *args):
         """Helper function for on_imi_broadcasts_*_activate."""
@@ -313,7 +313,7 @@ class EpoptesGui(object):
 
         # And, tell the clients to connect to the server
         rport = self.reverse_proxy_selected_clients(self.vncviewer_port)
-        self.exec_on_selected_clients([cmd, 'localhost', rport] + list(args))
+        self.exec_on_selected_clients([cmd, '127.0.0.1', rport] + list(args))
 
     def on_imi_broadcasts_monitor_user_activate(self, _widget):
         """Handle imi_sbroadcasts_monitor_user.activate event."""
@@ -345,11 +345,11 @@ class EpoptesGui(object):
                 '-viewonly'])
         # Running `xdg-screensaver reset` as root doesn't reset the D.E.
         # screensaver, so send the reset command to both epoptes processes
-        rport = self.reverse_proxy_selected_clients(self.vncserver_port)
         self.exec_on_selected_clients(
             ['reset_screensaver'], mode=EM_SYSTEM_AND_SESSION)
+        rport = self.reverse_proxy_selected_clients(self.vncserver_port)
         self.exec_on_selected_clients(
-            ["receive_broadcast", 'localhost', rport, self.vncserver_pwd,
+            ["receive_broadcast", '127.0.0.1', rport, self.vncserver_pwd,
              fullscreen], mode=EM_SYSTEM_OR_SESSION)
 
     def on_imi_broadcasts_broadcast_screen_fullscreen_activate(self, _widget):
@@ -413,7 +413,7 @@ class EpoptesGui(object):
                               'tcp-listen:%d,keepalive=1' % port,
                               'stdio,raw,echo=0'])
             rport = self.reverse_proxy_clients(port, [client])
-            self.exec_on_clients(['remote_term', 'localhost', rport], [client], mode=e_m)
+            self.exec_on_clients(['remote_term', '127.0.0.1', rport], [client], mode=e_m)
 
     def on_imi_open_terminal_user_locally_activate(self, _widget):
         """Handle imi_open_terminal_user_locally.activate event."""

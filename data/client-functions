@@ -160,15 +160,20 @@ background() {
     test -n "$print_pid" && echo $!
 }
 
+# Logging messages to the log.
+# For internal use.
+log() {
+    # Do some logging, either in ~/.xsession-errors or on the console.
+    echo "$(LANG=C date '+%c'), epoptes-client $1" >&5
+}
+
 # Execute a command in the background.
 # Parameters:
 # $1 = the command.
 execute() {
     local launcher
 
-    # Do some logging, either in ~/.xsession-errors or on the console.
-    echo "$(LANG=C date '+%c'), epoptes-client executing: $1" >&5
-
+    log "executing: $1"
     case "$1" in
     '')
         echo "Can't execute an empty command." >&5
@@ -322,6 +327,7 @@ stop_benchmark() {
 # $3 = True/False, whether the text contains pango markup.
 # $4 = icon name.
 message() {
+    log "message [$2] $1"
     # TODO: remove compatibility fallback after a few versions
     if [ -f "./message.py" ]; then
         background ./message.py "$@"
@@ -330,11 +336,33 @@ message() {
     fi
 }
 
+# Wait host.
+# For internal use.
+wait_host() {
+    timeout=5
+    st="$(date -u +%s)"
+    until $( /bin/bash -c "true < /dev/tcp/$1/$2" &>/dev/null)
+    do
+        log ""
+        ct="$(date -u +%s)"
+        elap="$(($ct - $st))"
+        if [ ${elap} -gt ${timeout} ]
+        then
+            log "error: $1:$2 didn't come up in ${timeout}s"
+            return 1
+        fi
+        if [ ${elap} -gt 0 ]; then sleep 1; fi
+    done
+    return 0
+}
+
 # Connect to the server to be monitored.
 # Parameters:
 # $1 = host.
 # $2 = port.
 get_monitored() {
+    log "monitor from \"$1:$2\""
+    wait_host $1 $2 && \
     background x11vnc -noshm -24to32 -viewonly -connect_or_exit "$1:$2"
 }
 
@@ -344,6 +372,8 @@ get_monitored() {
 # $2 = port.
 # $3 = grab keyboard and mouse.
 get_assisted() {
+    log "assist from \"$1:$2\" $3"
+    wait_host $1 $2 && \
     background x11vnc -noshm -24to32 ${3:+-grabptr -grabkbd} -connect_or_exit "$1:$2"
 }
 
@@ -363,8 +393,9 @@ reset_screensaver() {
 # $3 = password (encrypted as in ~/.vnc/passwd and octal-escaped).
 # $4 = fullscreen.
 receive_broadcast() {
+    log "broadcast from \"$1:$2\""
     receiving_broadcast=true
-    stop_receptions
+    stop_receptions -i
     reset_screensaver
     # See https://epoptes.org/documentation/vnc/
     if [ -z "$VNCVIEWER" ]; then
@@ -377,7 +408,8 @@ receive_broadcast() {
             VNCVIEWER=${VNCVIEWER##*/}
         fi
     fi
-    # shellcheck disable=SC2059  # $2 is octal-escaped
+    # shellcheck disable=SC2059  # $3 is octal-escaped
+    wait_host $1 $2 && \
     printf "$3" | {
         sleep 0.$(($(od -An -N2 -tu2 /dev/urandom) % 50 + 50))
         case "$VNCVIEWER" in
@@ -425,6 +457,7 @@ receive_broadcast() {
 stop_receptions() {
     local pid
 
+    if [ -z "$1" ]; then log "stop receptions"; fi
     unset receiving_broadcast
     ensure_display
     pid=$(xprop_get EPOPTES_VNCVIEWER_PID)
@@ -436,6 +469,7 @@ stop_receptions() {
 
 # Open a root terminal inside the X session.
 root_term() {
+    log "root"
     background xterm -e bash -l
 }
 
@@ -446,6 +480,7 @@ root_term() {
 remote_term() {
     local screen_params
 
+    log "remote_term from \"$1:$2\""
     if [ "$UID" -eq 0 ]; then
         screen_params="bash -l"
     else
