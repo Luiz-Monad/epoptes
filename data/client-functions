@@ -358,9 +358,10 @@ reset_screensaver() {
 
 # Receive a broadcasted screen from the server.
 # Parameters:
-# $1 = port.
-# $2 = password (encrypted as in ~/.vnc/passwd and octal-escaped).
-# $3 = fullscreen.
+# $1 = host.
+# $2 = port.
+# $3 = password (encrypted as in ~/.vnc/passwd and octal-escaped).
+# $4 = fullscreen.
 receive_broadcast() {
     receiving_broadcast=true
     stop_receptions
@@ -377,7 +378,7 @@ receive_broadcast() {
         fi
     fi
     # shellcheck disable=SC2059  # $2 is octal-escaped
-    printf "$2" | {
+    printf "$3" | {
         sleep 0.$(($(od -An -N2 -tu2 /dev/urandom) % 50 + 50))
         case "$VNCVIEWER" in
         realvnc-vnc-viewer)
@@ -391,28 +392,28 @@ receive_broadcast() {
                 -scaling=aspectfit -uselocalcursor=0 \
                 -enabletoolbar=0 -warnunencrypted=0 \
                 -hideclosealert=true -autoreconnect=false \
-                -passwd /dev/stdin ${3:+-fullscreen -menukey=} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen -menukey=} "$1:$2"
             ;;
         ssvncviewer)
             exec ssvncviewer -shared -viewonly -scale auto -escape never \
-                -passwd /dev/stdin ${3:+-fullscreen} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen} "$1:$2"
             ;;
         xtigervncviewer)
             exec xtigervncviewer -shared -viewonly \
-                -passwd /dev/stdin ${3:+-fullscreen -menukey=} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen -menukey=} "$1:$2"
             ;;
         xtightvncviewer)
             exec xtightvncviewer -shared -viewonly \
-                -passwd /dev/stdin ${3:+-fullscreen} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen} "$1:$2"
             ;;
         xvnc4viewer)
             exec xvnc4viewer -shared -viewonly -uselocalcursor=0 \
-                -passwd /dev/stdin ${3:+-fullscreen -menukey=} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen -menukey=} "$1:$2"
             ;;
         *)
             # A generic vncviewer, e.g. tigervnc on Arch/Fedora/SUSE
             exec "$VNCVIEWER" -shared -viewonly \
-                -passwd /dev/stdin ${3:+-fullscreen} "$SERVER:$1"
+                -passwd /dev/stdin ${4:+-fullscreen} "$1:$2"
             ;;
         esac
     } >/dev/null 2>&1 &

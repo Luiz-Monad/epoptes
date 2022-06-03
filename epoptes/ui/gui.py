@@ -349,7 +349,7 @@ class EpoptesGui(object):
         self.exec_on_selected_clients(
             ['reset_screensaver'], mode=EM_SYSTEM_AND_SESSION)
         self.exec_on_selected_clients(
-            ["receive_broadcast", rport, self.vncserver_pwd,
+            ["receive_broadcast", 'localhost', rport, self.vncserver_pwd,
              fullscreen], mode=EM_SYSTEM_OR_SESSION)
 
     def on_imi_broadcasts_broadcast_screen_fullscreen_activate(self, _widget):
