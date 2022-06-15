@@ -262,15 +262,15 @@ class EpoptesGui(object):
 
     def reverse_proxy_clients(self, port, clients):
         """Helper function for reversing the connection for clients."""
-        rport = config.system['REVERSE_PORT']
+        rport = int(config.system['REVERSE_PORT'])
         if self.reverseserver is None:
             self.reverseserver = subprocess.Popen([
                 'wstunnel', '--server', ('ws://0.0.0.0:%d' % rport)])
-        tport = random.uniform(49152, 65535)
+        tport = int(random.uniform(49152, 65535))
         self.exec_on_clients([
             'execute', ('wstunnel -L %d:127.0.0.1:%d ws://$SERVER:%d' % (tport, port, rport))],
             clients, mode=EM_SYSTEM_OR_SESSION)
-        return int(tport)
+        return tport
 
     def reverse_proxy_selected_clients(self, port):
         """Helper function for reversing the connection for selected clients."""
